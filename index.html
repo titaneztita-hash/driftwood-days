@@ -377,7 +377,7 @@ function render() {
   if (S.form) renderSheet();
 }
 function renderTabbar() {
-  var cur = S.page === 'note' ? 'notes' : S.page === 'cats' ? 'tasks' : S.page;
+  var cur = S.page === 'note' ? 'notes' : S.page === 'cats' ? (S.catFrom || 'tasks') : S.page;
   $('tabbar').innerHTML = [['today', IC.sun, 'วันนี้'], ['cal', IC.cal, 'ปฏิทิน'], ['tasks', IC.list, 'งาน'], ['notes', IC.note, 'โน้ต']].map(function (x) {
     return '<button type="button" data-act="go" data-page="' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '"' + (cur === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + x[2] + '</button>';
   }).join('');
@@ -460,8 +460,9 @@ function pageCal() {
     '<div style="display:flex;flex-direction:column;align-items:center"><h1 class="h1" style="font-size:22px">' + monthLabel(key) + '</h1>' +
     '<button type="button" class="link" data-act="thisMonth" style="padding:2px 8px">กลับไปวันนี้</button></div>' +
     '<button type="button" class="icon" data-act="month" data-n="1" aria-label="เดือนถัดไป">' + IC.right + '</button></div>' +
-    '<div class="seg" role="tablist" aria-label="มุมมองปฏิทิน"><button type="button" role="tab" data-act="calView" data-v="compact" class="' + (S.calView === 'compact' ? 'on' : '') + '" aria-selected="' + (S.calView === 'compact') + '">' + IC.dots + 'แบบย่อ</button>' +
-    '<button type="button" role="tab" data-act="calView" data-v="detail" class="' + (S.calView === 'detail' ? 'on' : '') + '" aria-selected="' + (S.calView === 'detail') + '">' + IC.rows + 'แบบละเอียด</button></div>';
+    '<div class="between"><div class="seg" role="tablist" aria-label="มุมมองปฏิทิน" style="flex:1"><button type="button" role="tab" data-act="calView" data-v="compact" class="' + (S.calView === 'compact' ? 'on' : '') + '" aria-selected="' + (S.calView === 'compact') + '">' + IC.dots + 'แบบย่อ</button>' +
+    '<button type="button" role="tab" data-act="calView" data-v="detail" class="' + (S.calView === 'detail' ? 'on' : '') + '" aria-selected="' + (S.calView === 'detail') + '">' + IC.rows + 'แบบละเอียด</button></div>' +
+    '<button type="button" class="ghost" data-act="go" data-page="cats">+ หมวด</button></div>';
   var loading = !S.ev[key] ? '<p class="small" style="text-align:center;margin:0">กำลังโหลดนัดของเดือนนี้…</p>' : '';
   var cals = S.raw.calendars && S.raw.calendars.length ? '<p class="small" style="margin:0;text-align:center">แสดงนัดจาก: Driftwood Days, ' + esc(S.raw.calendars.join(', ')) + '</p>' : '';
   if (S.calView === 'compact') {
@@ -519,7 +520,7 @@ function pageCats() {
     return '<button type="button" class="sw" aria-label="' + x.name + '" aria-pressed="' + on + '" data-act="catColor" data-k="' + k + '" style="background:' + x.c + ';' + (on ? 'box-shadow:0 0 0 3px #fff,0 0 0 5px ' + x.c : '') + '">' + (on ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '</button>';
   }).join('');
   var others = cats.filter(function (c) { return c.id !== ed.id; });
-  return '<div class="row"><button type="button" class="icon" data-act="go" data-page="tasks" aria-label="กลับ">' + IC.left + '</button><h1 class="h1" style="font-size:24px">หมวดหมู่</h1></div>' +
+  return '<div class="row"><button type="button" class="icon" data-act="go" data-page="' + (S.catFrom || 'tasks') + '" aria-label="กลับ">' + IC.left + '</button><h1 class="h1" style="font-size:24px">หมวดหมู่</h1></div>' +
     (cats.length ? '<div class="card list">' + rows + '</div>' : '<p class="empty">ยังไม่มีหมวด</p>') +
     '<section class="card stack" style="padding:16px;gap:12px"><div class="between"><h2 class="h2">' + (ed.id ? 'แก้ไขหมวด' : 'เพิ่มหมวดใหม่') + '</h2>' + (ed.id ? '<button type="button" class="link" data-act="newCat">+ เพิ่มหมวดใหม่แทน</button>' : '') + '</div>' +
     '<div class="field"><label for="catName">ชื่อหมวด</label><input id="catName" class="inp" type="text" value="' + esc(ed.name) + '" placeholder="เช่น เรียน" autocomplete="off"></div>' +
@@ -598,7 +599,35 @@ function catChips(sel) {
   return '<div class="chips"><button type="button" class="chip' + (!sel ? ' on' : '') + '" data-act="fCat" data-id="">ไม่มีหมวด</button>' + S.raw.cats.map(function (c) {
     var p = PAL[c.color] || NOSTYLE, on = c.id === sel;
     return '<button type="button" class="chip" data-act="fCat" data-id="' + esc(c.id) + '" aria-pressed="' + on + '" style="' + (on ? 'background:' + p.bg + ';border-color:' + p.c + ';color:' + p.tx + ';font-weight:600' : '') + '"><span class="dot" style="background:' + p.c + '"></span>' + esc(c.name) + '</button>';
-  }).join('') + '</div>';
+  }).join('') + (S.form.newCat ? '' : '<button type="button" class="chip" data-act="nc" style="border-style:dashed;border-color:var(--wood);background:transparent;color:var(--brown)">+ หมวดใหม่</button>') + '</div>' + newCatPanel();
+}
+// แผงเพิ่มหมวดในแผ่นเพิ่ม/แก้ไข — สร้างแล้วเลือกหมวดนั้นให้ทันที
+function newCatPanel() {
+  var n = S.form.newCat; if (!n) return '';
+  var p = PAL[n.color];
+  var sw = PAL_KEYS.map(function (k) {
+    var on = k === n.color, x = PAL[k];
+    return '<button type="button" class="sw" aria-label="' + x.name + '" aria-pressed="' + on + '" data-act="ncColor" data-k="' + k + '" style="width:30px;height:30px;background:' + x.c + ';' + (on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px ' + x.c : '') + '">' + (on ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '</button>';
+  }).join('');
+  return '<div class="stack" style="gap:10px;padding:12px;margin-top:8px;border-radius:14px;background:var(--paper);border:1px dashed var(--wood)">' +
+    '<div class="between"><span class="small b">หมวดใหม่</span><span class="tag" style="background:' + p.bg + ';color:' + p.tx + '">' + esc(n.name || 'ชื่อหมวด') + '</span></div>' +
+    '<input id="fNewCat" class="inp" type="text" value="' + esc(n.name) + '" placeholder="ชื่อหมวด เช่น เรียน" autocomplete="off" enterkeyhint="done">' +
+    '<div style="display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;justify-items:center">' + sw + '</div>' +
+    '<div class="grid2"><button type="button" class="outline" style="height:42px" data-act="ncCancel">ยกเลิก</button><button type="button" class="btn" style="height:42px" data-act="ncSave">เพิ่มหมวด</button></div></div>';
+}
+function ncOpen() {
+  syncForm();
+  var used = S.raw.cats.map(function (c) { return c.color; });
+  S.form.newCat = { name: '', color: PAL_KEYS.filter(function (k) { return used.indexOf(k) < 0; })[0] || 'lake' };
+  renderSheet(); var el = $('fNewCat'); if (el) el.focus();
+}
+function ncSave() {
+  var n = S.form.newCat; n.name = $('fNewCat').value.trim();
+  if (!n.name) { toast('กรุณาใส่ชื่อหมวด'); $('fNewCat').focus(); return; }
+  syncForm();
+  var c = { id: uid(), name: n.name, color: n.color, sort: S.raw.cats.length + 1 };
+  S.raw.cats.push(c); send('saveCategory', { id: c.id, name: c.name, color: c.color });
+  S.form.d.cat = c.id; S.form.newCat = null; saveCache(); renderSheet(); toast('เพิ่มหมวด "' + c.name + '" แล้ว 🏷️');
 }
 function remChips(list, multi) {
   var opts = REM_OPTS.slice();
@@ -829,6 +858,7 @@ function moveCat(i, n) {
 
 /* ================= ตัวจัดการคลิก ================= */
 function go(page) {
+  if (page === 'cats' && S.page !== 'cats') S.catFrom = S.page === 'cal' ? 'cal' : 'tasks';
   if (S.page === 'note' && page !== 'note') { if (noteTimer) flushNote(); S.note = null; }
   S.page = page;
   if (page === 'notes' && !S.notes) loadNotes();
@@ -855,7 +885,11 @@ document.addEventListener('click', function (e) {
     case 'openTask': openTask(b.dataset.id); break;
     case 'closeSheet': closeSheet(); break;
     case 'fKind': syncForm(); var keep = S.form.d; S.form = b.dataset.k === 'event' ? newEventForm(keep.date) : newTaskForm(keep.date); S.form.d.title = keep.title; S.form.d.cat = keep.cat; S.form.d.note = keep.note || ''; renderSheet(); break;
-    case 'fCat': syncForm(); S.form.d.cat = b.dataset.id; renderSheet(); break;
+    case 'fCat': syncForm(); if (S.form.newCat) S.form.newCat.name = $('fNewCat').value; S.form.d.cat = b.dataset.id; renderSheet(); break;
+    case 'nc': ncOpen(); break;
+    case 'ncColor': syncForm(); S.form.newCat.name = $('fNewCat').value; S.form.newCat.color = b.dataset.k; renderSheet(); break;
+    case 'ncCancel': syncForm(); S.form.newCat = null; renderSheet(); break;
+    case 'ncSave': ncSave(); break;
     case 'fRem':
       syncForm();
       if (S.form.kind === 'event') { var m = Number(b.dataset.m), r = S.form.d.reminders, i = r.indexOf(m); if (i >= 0) r.splice(i, 1); else if (r.length < 5) r.push(m); else toast('ตั้งเตือนได้สูงสุด 5 ครั้ง'); }
@@ -898,7 +932,10 @@ $('fab').addEventListener('click', function () {
   else openSheet(newEventForm(S.page === 'cal' ? S.selDay : today()));
 });
 $('overlay').addEventListener('click', function (e) { if (e.target === $('overlay')) closeSheet(); });
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.form) closeSheet(); });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target.id === 'fNewCat') { e.preventDefault(); ncSave(); return; }
+  if (e.key === 'Escape' && S.form) closeSheet();
+});
 $('lockForm').addEventListener('submit', unlock);
 window.addEventListener('beforeunload', function (e) { if (noteTimer) flushNote(); if (S.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
 document.addEventListener('visibilitychange', function () {
