@@ -120,6 +120,44 @@ details.more-opts .inner{display:flex;flex-direction:column;gap:12px;padding:12p
 .err{margin:0;font-size:14px;color:var(--danger);min-height:20px}
 .hidden{display:none!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ---------- จอคอม / แท็บเล็ตแนวนอน (กว้าง 960px ขึ้นไป) ---------- */
+.desk,.tabbar .desk{display:none}
+.cols,.tgroups{display:flex;flex-direction:column;gap:16px}
+.ngrid{display:flex;flex-direction:column;gap:8px}
+@media (min-width:960px){
+  .desk,.tabbar .desk{display:flex}
+  .app{max-width:none;margin:0 0 0 240px;padding:24px 28px}
+  .panel{max-width:1180px;margin:0 auto;min-height:calc(100vh - 48px);padding:24px 28px 32px;gap:20px}
+  .tabbar{top:0;right:auto;width:240px;display:flex;flex-direction:column;gap:6px;padding:24px 16px;border-top:0;border-right:1px solid var(--line);background:#fff}
+  .tabbar button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:15px}
+  .tabbar .brand{align-items:center;gap:10px;padding:0 6px 14px;margin-bottom:6px;border-bottom:1px solid var(--line2)}
+  .tabbar .brand img{width:44px;height:44px;border-radius:12px}
+  .tabbar .brand b{font-family:Mitr,sans-serif;font-weight:500;font-size:18px;color:var(--ink)}
+  .tabbar .addbtn{justify-content:center;margin-bottom:10px;background:var(--brown);color:var(--cream);height:46px;font-size:15px}
+  .tabbar .addbtn:hover{background:var(--ink)!important}
+  .fab{display:none!important}
+  .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+  .cols.cal{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+  .cols.cal>section{position:sticky;top:24px}
+  .tgroups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;align-items:start}
+  .ngrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .ncard{height:100%}
+  .mc{height:64px}.mc .n{font-size:16px}
+  .dc{height:150px;padding:6px 3px}
+  .ev{font-size:12px;padding:2px 5px}
+  .note-ed{max-width:760px;width:100%;margin:0 auto}
+  .calhead .seg{max-width:420px}
+  .overlay{align-items:center;padding:24px}
+  .sheet{max-width:600px;max-height:88vh;border-radius:24px;padding:20px 26px 26px}
+  .grab{display:none}
+  .toast{bottom:32px;left:calc(50% + 120px)}
+}
+@media (hover:hover){
+  .tabbar button:not(.on):hover,.chip:not(.on):hover,.icon:hover,.outline:hover,.ghost:hover{background:var(--line2)}
+  .mc:not(.sel):not(.today):hover,.dc:hover,.week button:not(.on):hover{background:var(--line2)}
+  .card[data-act]:hover,.ncard:hover{border-color:#CDB79E;box-shadow:0 2px 10px rgba(74,52,38,.08)}
+  .btn:hover{background:var(--ink)}
+}
 </style>
 </head>
 <body>
@@ -157,6 +195,7 @@ var PAL = {
   navy:     { name: 'กรมท่า',        c: '#2F5D87', bg: '#D4DFEA', tx: '#16314A', g: 'Blueberry', gc: '#3F51B5' }
 };
 var PAL_KEYS = Object.keys(PAL);
+var WIDE = window.matchMedia('(min-width:960px)');
 var NOSTYLE = { c: '#5E8FB5', bg: '#CFE3F1', tx: '#1F3F5B' };
 var OTHER = { c: '#8A8A84', bg: '#EEECE6', tx: '#3A3A36' };
 var NOTE_ST = {
@@ -378,7 +417,9 @@ function render() {
 }
 function renderTabbar() {
   var cur = S.page === 'note' ? 'notes' : S.page === 'cats' ? (S.catFrom || 'tasks') : S.page;
-  $('tabbar').innerHTML = [['today', IC.sun, 'วันนี้'], ['cal', IC.cal, 'ปฏิทิน'], ['tasks', IC.list, 'งาน'], ['notes', IC.note, 'โน้ต']].map(function (x) {
+  var addLbl = S.page === 'notes' ? 'เขียนโน้ตใหม่' : S.page === 'tasks' ? 'เพิ่มงาน' : 'เพิ่มนัด / งาน';
+  $('tabbar').innerHTML = '<div class="brand desk"><img src="icon-192.png" alt=""><b>Driftwood Days</b></div>' +
+    (S.raw && S.page !== 'note' && S.page !== 'cats' ? '<button type="button" class="desk addbtn" data-act="deskAdd">' + (S.page === 'notes' ? IC.pen : IC.plus) + addLbl + '</button>' : '') + [['today', IC.sun, 'วันนี้'], ['cal', IC.cal, 'ปฏิทิน'], ['tasks', IC.list, 'งาน'], ['notes', IC.note, 'โน้ต']].map(function (x) {
     return '<button type="button" data-act="go" data-page="' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '"' + (cur === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + x[2] + '</button>';
   }).join('');
 }
@@ -430,11 +471,11 @@ function pageToday() {
     '<h1 class="h1">วัน' + DOW_F[dowOf(d)] + ' ' + thDay(d) + '</h1><span class="sub">มีนัด ' + evs.length + ' รายการ · งานค้าง ' + left + ' อย่าง</span></div>' +
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span class="pill" id="status"></span><button type="button" class="ghost" data-act="lock" style="height:32px">' + IC.lock + ' ล็อก</button></div></div>' +
     '<div class="card week">' + week.join('') + '</div>' +
-    '<section class="stack"><div class="between"><h2 class="h2">นัดหมายวันนี้</h2><button type="button" class="link" data-act="go" data-page="cal">ดูปฏิทิน</button></div>' +
+    '<div class="cols"><section class="stack"><div class="between"><h2 class="h2">นัดหมายวันนี้</h2><button type="button" class="link" data-act="go" data-page="cal">ดูปฏิทิน</button></div>' +
     (evs.length ? evs.map(function (e) { return evRow(e, d); }).join('') : '<p class="empty" style="padding:4px 0">วันนี้ว่าง ไม่มีนัด 🌿</p>') + '</section>' +
     '<section class="stack"><div class="between"><h2 class="h2">ต้องทำวันนี้</h2><span class="small">เสร็จ ' + doneN + ' / ' + todo.length + '</span></div>' +
     (todo.length ? '<div class="progress"><i style="width:' + Math.round(doneN / todo.length * 100) + '%"></i></div><div class="card list">' + todo.map(taskRow).join('') + '</div>'
-      : '<p class="empty" style="padding:4px 0">ไม่มีงานที่ถึงกำหนดวันนี้ ✨</p>') + '</section>';
+      : '<p class="empty" style="padding:4px 0">ไม่มีงานที่ถึงกำหนดวันนี้ ✨</p>') + '</section></div>';
 }
 
 /* ----- หน้า: ปฏิทิน ----- */
@@ -442,7 +483,7 @@ function pageCal() {
   var key = S.calMonth, first = key + '-01', start = addDays(first, -dowOf(first));
   var nDays = new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0).getDate();
   var weeks = Math.ceil((dowOf(first) + nDays) / 7);
-  var t = today(), cells = [];
+  var t = today(), cells = [], nShow = WIDE.matches ? 4 : 2;
   for (var i = 0; i < weeks * 7; i++) {
     var d = addDays(start, i), out = monthOf(d) !== key, evs = out ? [] : eventsOn(d), tks = out ? [] : tasksOn(d).filter(function (x) { return !x.done; });
     var cls = (out ? ' out' : '') + (i % 7 === 0 ? ' sun' : '') + (d === t ? ' today' : '');
@@ -453,24 +494,24 @@ function pageCal() {
       var items = evs.map(function (e) { var c = evColor(e); return '<span class="ev" style="background:' + c.bg + ';color:' + c.tx + ';border:1px solid ' + c.c + '55">' + esc(e.title) + '</span>'; })
         .concat(tks.map(function (x) { return '<span class="ev" style="background:#fff;color:var(--brown);border:1px dashed var(--wood)">' + esc(x.title) + '</span>'; }));
       cells.push('<button type="button" class="dc' + cls + '" data-act="openDay" data-d="' + d + '" aria-label="' + thShort(d) + '"><span class="n">' + Number(d.slice(8)) + '</span>' +
-        items.slice(0, 2).join('') + (items.length > 2 ? '<span class="more">+' + (items.length - 2) + ' อีก</span>' : '') + '</button>');
+        items.slice(0, nShow).join('') + (items.length > nShow ? '<span class="more">+' + (items.length - nShow) + ' อีก</span>' : '') + '</button>');
     }
   }
   var head = '<div class="between"><button type="button" class="icon" data-act="month" data-n="-1" aria-label="เดือนก่อน">' + IC.left + '</button>' +
     '<div style="display:flex;flex-direction:column;align-items:center"><h1 class="h1" style="font-size:22px">' + monthLabel(key) + '</h1>' +
     '<button type="button" class="link" data-act="thisMonth" style="padding:2px 8px">กลับไปวันนี้</button></div>' +
     '<button type="button" class="icon" data-act="month" data-n="1" aria-label="เดือนถัดไป">' + IC.right + '</button></div>' +
-    '<div class="between"><div class="seg" role="tablist" aria-label="มุมมองปฏิทิน" style="flex:1"><button type="button" role="tab" data-act="calView" data-v="compact" class="' + (S.calView === 'compact' ? 'on' : '') + '" aria-selected="' + (S.calView === 'compact') + '">' + IC.dots + 'แบบย่อ</button>' +
+    '<div class="between calhead"><div class="seg" role="tablist" aria-label="มุมมองปฏิทิน" style="flex:1"><button type="button" role="tab" data-act="calView" data-v="compact" class="' + (S.calView === 'compact' ? 'on' : '') + '" aria-selected="' + (S.calView === 'compact') + '">' + IC.dots + 'แบบย่อ</button>' +
     '<button type="button" role="tab" data-act="calView" data-v="detail" class="' + (S.calView === 'detail' ? 'on' : '') + '" aria-selected="' + (S.calView === 'detail') + '">' + IC.rows + 'แบบละเอียด</button></div>' +
     '<button type="button" class="ghost" data-act="go" data-page="cats">+ หมวด</button></div>';
   var loading = !S.ev[key] ? '<p class="small" style="text-align:center;margin:0">กำลังโหลดนัดของเดือนนี้…</p>' : '';
   var cals = S.raw.calendars && S.raw.calendars.length ? '<p class="small" style="margin:0;text-align:center">แสดงนัดจาก: Driftwood Days, ' + esc(S.raw.calendars.join(', ')) + '</p>' : '';
   if (S.calView === 'compact') {
     var sd = S.selDay, evs = eventsOn(sd), tks = tasksOn(sd);
-    return head + loading + '<div class="card" style="padding:4px 8px 8px"><div class="dow">' + DOW_S.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="mgrid" style="gap:2px">' + cells.join('') + '</div></div>' +
+    return head + loading + '<div class="cols cal"><div class="card" style="padding:4px 8px 8px"><div class="dow">' + DOW_S.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="mgrid" style="gap:2px">' + cells.join('') + '</div></div>' +
       '<section class="stack"><div class="between"><h2 class="h2">วัน' + DOW_F[dowOf(sd)] + ' ' + thDay(sd) + '</h2><button type="button" class="link" data-act="newEvent" data-d="' + sd + '">+ เพิ่มนัดวันนี้</button></div>' +
       (evs.length || tks.length ? evs.map(function (e) { return evRow(e, sd); }).join('') + (tks.length ? '<div class="card list">' + tks.map(taskRow).join('') + '</div>' : '')
-        : '<p class="empty" style="padding:4px 0">ไม่มีนัดหรืองานในวันนี้</p>') + '</section>' + cals;
+        : '<p class="empty" style="padding:4px 0">ไม่มีนัดหรืองานในวันนี้</p>') + '</section></div>' + cals;
   }
   return head + loading + '<div class="card" style="overflow:hidden"><div class="dow" style="background:var(--paper);border-bottom:1px solid var(--line)">' + DOW_S.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="mgrid">' + cells.join('') + '</div></div>' +
     '<p class="small" style="margin:0;text-align:center">แตะที่วันเพื่อดูรายละเอียด · กรอบเส้นประคืองานที่ต้องทำ</p>' + cals;
@@ -500,7 +541,7 @@ function pageTasks() {
     g[1].sort(function (a, b) { return ((a.date || '') + (a.time || '99')) < ((b.date || '') + (b.time || '99')) ? -1 : 1; });
     return '<section class="stack" style="gap:8px"><div class="row"><h2 class="h2" style="font-size:17px;' + (g[2] ? 'color:var(--late)' : '') + '">' + g[0] + '</h2><span class="small">' + g[1].length + ' อย่าง</span></div><div class="card list">' + g[1].map(taskRow).join('') + '</div></section>';
   }).join('');
-  return head + (body || '<p class="empty" style="text-align:center;padding:30px 0">ไม่มีงานค้าง เยี่ยมไปเลย 🌊<br>กด + เพื่อเพิ่มงานใหม่</p>');
+  return head + (body ? '<div class="tgroups">' + body + '</div>' : '<p class="empty" style="text-align:center;padding:30px 0">ไม่มีงานค้าง เยี่ยมไปเลย 🌊<br>กด + เพื่อเพิ่มงานใหม่</p>');
 }
 
 /* ----- หน้า: หมวดหมู่ ----- */
@@ -521,7 +562,7 @@ function pageCats() {
   }).join('');
   var others = cats.filter(function (c) { return c.id !== ed.id; });
   return '<div class="row"><button type="button" class="icon" data-act="go" data-page="' + (S.catFrom || 'tasks') + '" aria-label="กลับ">' + IC.left + '</button><h1 class="h1" style="font-size:24px">หมวดหมู่</h1></div>' +
-    (cats.length ? '<div class="card list">' + rows + '</div>' : '<p class="empty">ยังไม่มีหมวด</p>') +
+    '<div class="cols">' + (cats.length ? '<div class="card list">' + rows + '</div>' : '<p class="empty">ยังไม่มีหมวด</p>') +
     '<section class="card stack" style="padding:16px;gap:12px"><div class="between"><h2 class="h2">' + (ed.id ? 'แก้ไขหมวด' : 'เพิ่มหมวดใหม่') + '</h2>' + (ed.id ? '<button type="button" class="link" data-act="newCat">+ เพิ่มหมวดใหม่แทน</button>' : '') + '</div>' +
     '<div class="field"><label for="catName">ชื่อหมวด</label><input id="catName" class="inp" type="text" value="' + esc(ed.name) + '" placeholder="เช่น เรียน" autocomplete="off"></div>' +
     '<div class="field"><span class="lbl">สี · ' + p.name + '</span><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;justify-items:center">' + sw + '</div></div>' +
@@ -533,7 +574,7 @@ function pageCats() {
     '<button type="button" class="btn" data-act="saveCat">' + (ed.id ? 'บันทึกการแก้ไข' : 'เพิ่มหมวด') + '</button>' +
     (ed.id ? '<div class="stack" style="gap:8px;border-top:1px solid var(--line2);padding-top:12px"><label for="catMove" class="lbl">ถ้าลบหมวดนี้ ย้ายงานและนัดไปที่</label>' +
       '<select id="catMove" class="inp"><option value="">ไม่มีหมวด</option>' + others.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('') + '</select>' +
-      '<button type="button" class="danger" data-act="delCat">ลบหมวดนี้</button></div>' : '') + '</section>';
+      '<button type="button" class="danger" data-act="delCat">ลบหมวดนี้</button></div>' : '') + '</section></div>';
 }
 
 /* ----- หน้า: โน้ต ----- */
@@ -553,8 +594,8 @@ function noteListHtml() {
   var list = S.notes.filter(noteMatches).sort(function (a, b) { return (b.updated || '') < (a.updated || '') ? -1 : 1; });
   var pin = list.filter(function (n) { return n.pinned; }), rest = list.filter(function (n) { return !n.pinned; });
   if (!list.length) return '<p class="empty" style="text-align:center;padding:24px 0">' + (S.noteQ ? 'ไม่พบโน้ตที่ตรงกับคำค้นหา' : 'ยังไม่มีโน้ตในหมวดนี้ กดปากกาเพื่อเริ่มจดได้เลย') + '</p>';
-  return (pin.length ? '<section class="stack" style="gap:8px"><span class="small b">ปักหมุด</span>' + pin.map(noteCard).join('') + '</section>' : '') +
-    (rest.length ? '<section class="stack" style="gap:8px">' + (pin.length ? '<span class="small b">ล่าสุด</span>' : '') + rest.map(noteCard).join('') + '</section>' : '');
+  return (pin.length ? '<section class="stack" style="gap:8px"><span class="small b">ปักหมุด</span><div class="ngrid">' + pin.map(noteCard).join('') + '</div></section>' : '') +
+    (rest.length ? '<section class="stack" style="gap:8px">' + (pin.length ? '<span class="small b">ล่าสุด</span>' : '') + '<div class="ngrid">' + rest.map(noteCard).join('') + '</div></section>' : '');
 }
 function pageNotes() {
   var ns = S.notes || [];
@@ -887,6 +928,7 @@ document.addEventListener('click', function (e) {
     case 'fKind': syncForm(); var keep = S.form.d; S.form = b.dataset.k === 'event' ? newEventForm(keep.date) : newTaskForm(keep.date); S.form.d.title = keep.title; S.form.d.cat = keep.cat; S.form.d.note = keep.note || ''; renderSheet(); break;
     case 'fCat': syncForm(); if (S.form.newCat) S.form.newCat.name = $('fNewCat').value; S.form.d.cat = b.dataset.id; renderSheet(); break;
     case 'nc': ncOpen(); break;
+    case 'deskAdd': $('fab').click(); break;
     case 'ncColor': syncForm(); S.form.newCat.name = $('fNewCat').value; S.form.newCat.color = b.dataset.k; renderSheet(); break;
     case 'ncCancel': syncForm(); S.form.newCat = null; renderSheet(); break;
     case 'ncSave': ncSave(); break;
@@ -932,6 +974,7 @@ $('fab').addEventListener('click', function () {
   else openSheet(newEventForm(S.page === 'cal' ? S.selDay : today()));
 });
 $('overlay').addEventListener('click', function (e) { if (e.target === $('overlay')) closeSheet(); });
+WIDE.addEventListener && WIDE.addEventListener('change', function () { if (S.raw && !S.form && S.page === 'cal') render(); });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && e.target.id === 'fNewCat') { e.preventDefault(); ncSave(); return; }
   if (e.key === 'Escape' && S.form) closeSheet();
