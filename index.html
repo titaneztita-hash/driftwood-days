@@ -444,7 +444,7 @@ function taskRow(t) {
   var meta = [];
   if (t.date) meta.push(t.date === today() ? 'วันนี้' : thShort(t.date));
   if (t.time) meta.push(t.time);
-  if (t.remind !== '' && t.remind != null && t.date) meta.push('เตือน ' + remText(t.remind));
+  if (t.remind !== '' && t.remind != null && t.date) meta.push(t.nag && !t.done ? 'เตือนทุกวันจนกว่าจะเสร็จ' : 'เตือน ' + remText(t.remind));
   if (t.repeat && t.repeat !== 'none') meta.push(REPEAT[t.repeat]);
   return '<div class="li"><input type="checkbox" aria-label="ทำเสร็จ: ' + esc(t.title) + '" data-act="toggleTask" data-id="' + esc(t.id) + '"' + (t.done ? ' checked' : '') + '>' +
     '<button type="button" data-act="openTask" data-id="' + esc(t.id) + '" style="border:0;background:transparent;padding:0;text-align:left;flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px">' +
@@ -635,7 +635,7 @@ function newEventForm(d) {
   return { kind: 'event', mode: 'new', d: { title: '', allDay: false, date: d || today(), endDate: '', startTime: st, endTime: plusHour(st), reminders: [30], repeat: 'none', cat: (S.raw.cats[0] || {}).id || '', location: '', note: '' } };
 }
 function newTaskForm(d) {
-  return { kind: 'task', mode: 'new', d: { title: '', cat: S.taskCat !== 'all' && S.taskCat !== 'none' ? S.taskCat : '', hasDate: !!d, date: d || today(), time: '', remind: '', repeat: 'none', note: '' } };
+  return { kind: 'task', mode: 'new', d: { title: '', cat: S.taskCat !== 'all' && S.taskCat !== 'none' ? S.taskCat : '', hasDate: !!d, date: d || today(), time: '', remind: '', nag: false, repeat: 'none', note: '' } };
 }
 function catChips(sel) {
   return '<div class="chips"><button type="button" class="chip' + (!sel ? ' on' : '') + '" data-act="fCat" data-id="">ไม่มีหมวด</button>' + S.raw.cats.map(function (c) {
@@ -722,7 +722,8 @@ function renderSheet() {
       (d.hasDate ? '<div class="li"><span class="t15" style="width:60px">วันที่</span><input id="fDate" class="inp" type="date" value="' + d.date + '" style="flex:1 1 auto"></div>' +
         '<div class="li"><span class="t15" style="width:60px">เวลา</span><input id="fTime" class="inp" type="time" value="' + d.time + '" style="flex:1 1 auto"></div>' : '') + '</div>';
     if (d.hasDate) h += '<div class="field"><span class="lbl">' + IC.bell + ' แจ้งเตือน' + (d.time ? '' : ' (ไม่ใส่เวลา = นับจากเที่ยงคืนของวันนั้น)') + '</span>' + remChips(d.remind === '' ? [] : [d.remind], false) + '</div>' +
-      '<div class="field"><label for="fRepeat">ทำซ้ำ</label>' + repeatSelect(d.repeat) + '</div>';
+      '<div class="box"><label class="li"><span class="grow"><span class="t15" style="display:block">เตือนทุกวันจนกว่าจะเสร็จ</span><span class="small">งานชิ้นเดียว เด้งเตือนทุกวันตามเวลาที่ตั้ง ติ๊กเสร็จแล้วหยุดเตือน</span></span><input type="checkbox" data-act="fNag"' + (d.nag ? ' checked' : '') + '></label></div>' +
+      (d.nag ? '' : '<div class="field"><label for="fRepeat">ทำซ้ำ (งาน routine)</label>' + repeatSelect(d.repeat) + (d.repeat !== 'none' ? '<span class="small">ติ๊กเสร็จแล้วแอปจะสร้างงานรอบถัดไปให้</span>' : '') + '</div>');
     h += '<div class="field"><label for="fNote">หมายเหตุ</label><input id="fNote" class="inp" type="text" value="' + esc(d.note) + '"></div>';
   }
   h += '<button type="button" class="btn" data-act="saveForm">' + (edit ? 'บันทึกการแก้ไข' : isEv ? 'บันทึกนัดหมาย' : 'บันทึกงาน') + '</button>';
@@ -776,13 +777,14 @@ function saveEventForm(f) {
   toast(f.mode === 'edit' ? 'แก้ไขแล้ว ✏️' : 'บันทึกนัดแล้ว 🌊');
 }
 function refetchEvents() { Object.keys(S.ev).forEach(function (k) { delete S.ev[k]; }); ensureEvents(S.calMonth, true); if (monthOf(today()) !== S.calMonth) ensureEvents(monthOf(today()), true); }
-function taskPayload(t) { return { id: t.id, title: t.title, cat: t.cat, date: t.date, time: t.time, repeat: t.repeat, remind: t.remind, done: t.done, note: t.note, created: t.created }; }
+function taskPayload(t) { return { id: t.id, title: t.title, cat: t.cat, date: t.date, time: t.time, repeat: t.repeat, remind: t.remind, nag: !!t.nag, done: t.done, note: t.note, created: t.created }; }
 function saveTaskForm(f) {
   var d = f.d, t;
   if (f.mode === 'edit') t = S.raw.tasks.filter(function (x) { return x.id === f.id; })[0];
   if (!t) { t = { id: uid(), done: false, doneAt: '', created: nowIso() }; S.raw.tasks.push(t); }
   t.title = d.title.trim(); t.cat = d.cat; t.date = d.hasDate ? d.date : ''; t.time = d.hasDate ? d.time : '';
-  t.remind = d.hasDate ? d.remind : ''; t.repeat = d.hasDate ? d.repeat : 'none'; t.note = d.note;
+  t.remind = d.hasDate ? d.remind : ''; t.nag = !!(d.hasDate && d.nag && t.remind !== '');
+  t.repeat = d.hasDate && !t.nag ? d.repeat : 'none'; t.note = d.note;
   saveCache();
   send('saveTask', taskPayload(t));
   toast(f.mode === 'edit' ? 'แก้ไขแล้ว ✏️' : 'เพิ่มงานแล้ว ✅');
@@ -815,14 +817,14 @@ function openEvent(id, start) {
 }
 function openTask(id) {
   var t = S.raw.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
-  openSheet({ kind: 'task', mode: 'edit', id: id, d: { title: t.title, cat: t.cat, hasDate: !!t.date, date: t.date || today(), time: t.time, remind: t.remind, repeat: t.repeat || 'none', note: t.note } });
+  openSheet({ kind: 'task', mode: 'edit', id: id, d: { title: t.title, cat: t.cat, hasDate: !!t.date, date: t.date || today(), time: t.time, remind: t.remind, nag: !!t.nag, repeat: t.repeat || 'none', note: t.note } });
 }
 function nextDate(d, rep) { return rep === 'daily' ? addDays(d, 1) : rep === 'weekly' ? addDays(d, 7) : rep === 'monthly' ? addMonths(d, 1) : addMonths(d, 12); }
 function toggleTask(id, done) {
   var t = S.raw.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
   t.done = done; t.doneAt = done ? nowIso() : '';
   var n = null;
-  if (done && t.repeat && t.repeat !== 'none' && t.date) {
+  if (done && !t.nag && t.repeat && t.repeat !== 'none' && t.date) {
     n = { id: uid(), title: t.title, cat: t.cat, date: nextDate(t.date, t.repeat), time: t.time, repeat: t.repeat, remind: t.remind, done: false, doneAt: '', note: t.note, created: nowIso() };
     t.repeat = 'none'; // รอบที่ทำเสร็จแล้วไม่ต้องทำซ้ำต่อ ส่งต่อให้รอบใหม่
   }
@@ -936,7 +938,7 @@ document.addEventListener('click', function (e) {
     case 'fRem':
       syncForm();
       if (S.form.kind === 'event') { var m = Number(b.dataset.m), r = S.form.d.reminders, i = r.indexOf(m); if (i >= 0) r.splice(i, 1); else if (r.length < 5) r.push(m); else toast('ตั้งเตือนได้สูงสุด 5 ครั้ง'); }
-      else S.form.d.remind = b.dataset.m;
+      else { S.form.d.remind = b.dataset.m; if (b.dataset.m === '') S.form.d.nag = false; }
       renderSheet(); break;
     case 'saveForm': saveForm(); break;
     case 'delForm': delForm(b); break;
@@ -961,6 +963,15 @@ document.addEventListener('change', function (e) {
   if (t.dataset.act === 'toggleTask') toggleTask(t.dataset.id, t.checked);
   else if (t.dataset.act === 'fAllDay') { syncForm(); S.form.d.allDay = t.checked; renderSheet(); }
   else if (t.dataset.act === 'fHasDate') { syncForm(); S.form.d.hasDate = t.checked; renderSheet(); }
+  else if (t.dataset.act === 'fNag') {
+    syncForm(); var fd = S.form.d; fd.nag = t.checked;
+    if (fd.nag) {
+      fd.repeat = 'none';
+      if (fd.remind === '') fd.remind = '0';
+      if (!fd.time) { fd.time = '09:00'; toast('ตั้งเวลาเตือนเป็น 09:00 ให้ก่อน แก้ได้นะ'); }
+    }
+    renderSheet();
+  }
   else if (t.id === 'fStart' || t.id === 'fEnd') { var oldEnd = S.form.d.endTime, oldStart = S.form.d.startTime; syncForm(); if (t.id === 'fStart' && oldEnd === plusHour(oldStart)) S.form.d.endTime = plusHour(S.form.d.startTime); renderSheet(); }
 });
 document.addEventListener('toggle', function (e) { if (S.form && e.target.classList && e.target.classList.contains('more-opts')) S.form.moreOpen = e.target.open; }, true);
